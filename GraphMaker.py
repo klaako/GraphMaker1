@@ -86,7 +86,11 @@ data = input_csv_data()
 
 # Parse and plot the CSV data
 df = pd.read_csv(io.StringIO(data), parse_dates=["billing_period"])
-grouped_df = df.groupby(["billing_period", "product_family"]).sum()["Cost (SUM)"].unstack().fillna(0)
+date_col = df.columns[0] # assuming the first column is the date column
+category_col = df.columns[1] # assuming the second column is the category column
+value_col = df.columns[-1] # assuming the last column is the value column
+grouped_df = df.groupby([date_col, category_col]).sum()[value_col].unstack().fillna(0)
+
 
 fig, ax = plt.subplots(figsize=(12, 8))
 colors = plt.get_cmap(color_scheme)(np.linspace(0, 1, len(grouped_df.columns)))
@@ -109,10 +113,12 @@ elif graph_type == "Area Graph":
         ax.annotate(f'${y[-1]:,.0f}', (x, y[-1]), textcoords="offset points", xytext=(0,5), ha='center', fontsize=8)
 
 ax.yaxis.set_major_formatter(plt.FuncFormatter(currency_formatter))
-ax.set_xticklabels(grouped_df.index.strftime('%B'))
-plt.title(graph_title)
-plt.ylabel("Cost (SUM)")
-plt.xlabel("Billing Period")
+if pd.api.types.is_datetime64_any_dtype(df[date_col].dtype):  # Check if the date column is of datetime type
+    ax.set_xticklabels(grouped_df.index.strftime('%B'))
+else:
+    ax.set_xticklabels(grouped_df.index)
+plt.ylabel(value_col)
+plt.xlabel(date_col)
 plt.xticks(rotation=45)
 plt.legend(title="Product Family", bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 plt.tight_layout()
